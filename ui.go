@@ -11,10 +11,28 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
+type state int
+
+const (
+	stateReady state = iota
+	stateTxSign
+	stateKSAccess
+	stateKSStore
+	stateWalletCreate
+	stateWalletInfo
+	stateWalletHD
+	stateOutput
+	statePK
+	statePrivateKey
+	statePublicKey
+	stateMessageSign
+	stateQuit
+)
+
 type ListItem struct {
 	title string
 	desc  string
-	id    string
+	id    state
 }
 
 func (i ListItem) Title() string       { return i.title }
@@ -40,7 +58,7 @@ type UI struct {
 	input textinput.Model
 
 	choice     ListItem
-	state      string
+	state      state
 	inputText  string
 	walletData WalletData
 	output     string
@@ -55,7 +73,6 @@ func (m UI) Init() tea.Cmd {
 }
 
 func (m UI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-
 	switch msg := msg.(type) {
 
 	case tea.KeyMsg:
@@ -64,7 +81,7 @@ func (m UI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 
 		case "tab", "shift+tab", "up", "down":
-			if m.state == "sign_transaction" || m.state == "keystore_access" {
+			if m.state == stateTxSign || m.state == stateKSAccess {
 				s := msg.String()
 
 				// Cycle indexes
@@ -100,9 +117,9 @@ func (m UI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		case "enter":
 
-			if m.state == "new_wallet" || m.state == "get_info_wallet" || m.state == "output" {
-				m.setState("main")
-			} else if m.state == "sign_transaction" {
+			if m.state == stateWalletCreate || m.state == stateWalletInfo || m.state == stateOutput {
+				m.setState(stateReady)
+			} else if m.state == stateTxSign {
 				if m.focusIndex == len(m.multiInput) {
 					nonce, _ := strconv.Atoi(m.multiInput[0].Value())
 					toAddress := m.multiInput[1].Value()
@@ -115,79 +132,79 @@ func (m UI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 					m.title = "Signed Transaction Hash"
 					m.output = signedTransaction
-					m.setState("output")
+					m.setState(stateOutput)
 
 					m.setMultiInputView()
 				}
-			} else if m.state == "keystore_access" {
+			} else if m.state == stateKSAccess {
 				path := m.multiInput[0].Value()
 				password := m.multiInput[1].Value()
 
 				walletData := loadKeystore(path, password)
 				m.walletData = walletData
-				m.setState("main")
+				m.setState(stateReady)
 				m.list.SetItems(getControlWalletItems())
 				m.list.Title = m.walletData.PublicKey
 
-			} else if m.state == "pk" {
+			} else if m.state == statePK {
 				privateKey := m.input.Value()
 				m.walletData = getWalletFromPK(privateKey)
-				m.setState("main")
+				m.setState(stateReady)
 				m.list.SetItems(getControlWalletItems())
 				m.input = getText()
 				m.list.Title = m.walletData.PublicKey
-			} else if m.state == "sign_message" {
+			} else if m.state == stateMessageSign {
 				message := m.input.Value()
 				signedMessage := m.walletData.signMessage(message)
 				m.title = "Signed Message"
 				m.output = signedMessage
-				m.setState("output")
+				m.setState(stateOutput)
 				m.input = getText()
-			} else if m.state == "save_keystore" {
+			} else if m.state == stateKSStore {
 				password := m.input.Value()
 				keystoreFile := m.walletData.createKeystore(password)
 				m.title = "Keystore file saved"
 				m.output = "Path: " + keystoreFile
-				m.setState("output")
+				m.setState(stateOutput)
 				m.input = getText()
-			} else if m.state == "main" || m.state == "access_wallet" {
+			} else if m.state == stateReady || m.state == stateWalletInfo {
 				item, ok := m.list.SelectedItem().(ListItem)
 
 				m.setState(item.id)
 				switch item.id {
-				case "sign_transaction":
+				case stateTxSign:
 					m.setMultiInputView()
-				case "keystore_access":
+				case stateKSAccess:
 					m.setMultiInputViewKeystoreFile()
-				case "access_wallet":
+				case stateWalletInfo:
 					m.list.SetItems(getAccessWalletItems())
 					m.list.Title = "Access Wallet"
-				case "new_wallet":
+				case stateWalletCreate:
 					walletData := generateWallet()
 					m.walletData = walletData
-					m.setState("main")
+					m.setState(stateReady)
 					m.list.SetItems(getControlWalletItems())
 					m.input = getText()
 					m.list.Title = m.walletData.PublicKey
-				case "public_key":
+				case statePublicKey:
 					m.output = dispalWalletPublicKey(m.walletData)
 					m.title = "Public Key"
-					m.setState("output")
-				case "private_key":
+					m.setState(stateOutput)
+				case statePrivateKey:
 					m.output = displayWalletPrivateKey(m.walletData)
 					m.title = "Private Key"
-					m.setState("output")
-				case "pk":
+					m.setState(stateOutput)
+				case statePK:
 					m.title = "Private Key"
-				case "sign_message":
+				case stateMessageSign:
 					m.title = "Message to sign"
-				case "save_keystore":
+				case stateKSStore:
 					m.title = "Keystore Password"
 				}
 
-				if m.state == "quit" {
+				if m.state == stateQuit {
 					m.list.SetItems(getMainItems())
-					m.setState("main")
+					m.setState(stateReady)
 					m.list.Title = "✨✨✨"
 				}
 
@@ -204,15 +221,15 @@ func (m UI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	var cmd tea.Cmd
 
-	if m.state == "main" || m.state == "access_wallet" {
+	if m.state == stateReady || m.state == stateWalletInfo {
 		m.list, cmd = m.list.Update(msg)
 	}
 
-	if m.state == "pk" || m.state == "sign_message" || m.state == "save_keystore" || m.state == "keystore_access" {
+	if m.state == statePK || m.state == stateMessageSign || m.state == stateKSStore || m.state == stateKSAccess {
 		m.input, cmd = m.input.Update(msg)
 	}
 
-	if m.state == "sign_transaction" || m.state == "keystore_access" {
+	if m.state == stateTxSign || m.state == stateKSAccess {
 		cmd = m.updateInputs(msg)
 	}
 
@@ -221,29 +238,30 @@ func (m UI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func getMainItems() []list.Item {
 	items := []list.Item{
-		ListItem{title: "New Wallet", desc: "Create a new wallet", id: "new_wallet"},
-		ListItem{title: "Access Wallet", desc: "Access an existing wallet", id: "access_wallet"},
+		ListItem{title: "New Wallet", desc: "Create a new wallet", id: stateWalletCreate},
+		ListItem{title: "New HD Wallet", desc: "Access a wallet", id: stateWalletInfo},
+		ListItem{title: "Access Wallet", desc: "Access an existing wallet", id: stateWalletInfo},
 	}
 	return items
 }
 
 func getAccessWalletItems() []list.Item {
 	items := []list.Item{
-		ListItem{title: "Private Key", desc: "Access your wallet using your private key", id: "pk"},
-		ListItem{title: "Keystore File", desc: "Access a wallet using your keystore file", id: "keystore_access"},
-		ListItem{title: "Quit", desc: "Quit to main menu", id: "quit"},
+		ListItem{title: "Private Key", desc: "Access your wallet using your private key", id: statePK},
+		ListItem{title: "Keystore File", desc: "Access a wallet using your keystore file", id: stateKSAccess},
+		ListItem{title: "Quit", desc: "Quit to main menu", id: stateQuit},
 	}
 	return items
 }
 
 func getControlWalletItems() []list.Item {
 	items := []list.Item{
-		ListItem{title: "Public Key", desc: "Display public key and QR", id: "public_key"},
-		ListItem{title: "Private Key", desc: "Display private key and QR", id: "private_key"},
-		ListItem{title: "Save Keystore", desc: "Save the wallet to a keystore file", id: "save_keystore"},
-		ListItem{title: "Sign Message", desc: "Sign a message with the private key", id: "sign_message"},
-		ListItem{title: "Sign Transaction", desc: "Sign a transaction with the private key", id: "sign_transaction"},
-		ListItem{title: "Quit", desc: "Quit to main menu", id: "quit"},
+		ListItem{title: "Public Key", desc: "Display public key and QR", id: statePublicKey},
+		ListItem{title: "Private Key", desc: "Display private key and QR", id: statePrivateKey},
+		ListItem{title: "Save Keystore", desc: "Save the wallet to a keystore file", id: stateKSStore},
+		ListItem{title: "Sign Message", desc: "Sign a message with the private key", id: stateMessageSign},
+		ListItem{title: "Sign Transaction", desc: "Sign a transaction with the private key", id: stateTxSign},
+		ListItem{title: "Quit", desc: "Quit to main menu", id: stateQuit},
 	}
 	return items
 }
@@ -258,11 +276,14 @@ func getText() textinput.Model {
 }
 
 func getUI() UI {
-	m := UI{list: list.NewModel(getMainItems(), list.NewDefaultDelegate(), 0, 0), input: getText(), state: "main"}
-	return m
+	return UI{
+		list:  list.NewModel(getMainItems(), list.NewDefaultDelegate(), 0, 0),
+		input: getText(),
+		state: stateReady,
+	}
 }
 
-func (m *UI) setState(state string) {
+func (m *UI) setState(state state) {
 	m.state = state
 }
 
@@ -273,6 +294,7 @@ func dispalWalletPublicKey(walletData WalletData) string {
 		"Public Key: "+walletData.PublicKey,
 	)
 }
+
 func displayWalletPrivateKey(walletData WalletData) string {
 	return fmt.Sprintf(
 		"%s\n%s",
@@ -348,7 +370,7 @@ func (m *UI) setMultiInputViewKeystoreFile() {
 }
 
 func (m *UI) updateInputs(msg tea.Msg) tea.Cmd {
-	var cmds = make([]tea.Cmd, len(m.multiInput))
+	cmds := make([]tea.Cmd, len(m.multiInput))
 
 	// Only text inputs with Focus() set will respond, so it's safe to simply
 	// update all of them here without any further logic.
@@ -360,11 +382,10 @@ func (m *UI) updateInputs(msg tea.Msg) tea.Cmd {
 }
 
 func (m UI) View() string {
-
 	if m.choice.title != "" {
 		switch m.state {
 
-		case "sign_transaction":
+		case stateTxSign:
 			var b strings.Builder
 			for i := range m.multiInput {
 				b.WriteString(m.multiInput[i].View())
@@ -381,7 +402,7 @@ func (m UI) View() string {
 
 			return b.String()
 
-		case "keystore_access":
+		case stateKSAccess:
 			var b strings.Builder
 			for i := range m.multiInput {
 				b.WriteString(m.multiInput[i].View())
@@ -398,7 +419,7 @@ func (m UI) View() string {
 
 			return b.String()
 
-		case "save_keystore", "pk", "sign_message":
+		case stateKSStore, statePK, stateMessageSign:
 			return docStyle.Render(fmt.Sprintf(
 				"%s\n%s\n%s",
 				titleStyle.Render(m.title),
@@ -406,7 +427,7 @@ func (m UI) View() string {
 				blurredStyle.Render("Press ctrl+c to quit"),
 			))
 
-		case "output":
+		case stateOutput:
 			in := fmt.Sprintf(
 				"%s\n%s\n%s",
 				titleStyle.Render(m.title),
