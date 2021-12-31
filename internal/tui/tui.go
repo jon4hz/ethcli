@@ -18,6 +18,7 @@ const (
 	stateLoadKeystore
 	stateShowPublicKey
 	stateShowPrivateKey
+	stateShowMnemonic
 	stateShowBalance
 	stateShowTokenBalance
 	stateNewMessage
@@ -103,6 +104,11 @@ func (m model) View() string {
 	case stateInit, stateReady:
 		return style.DocStyle.Render(m.list.View())
 	default:
-		return style.DocStyle.Render(m.list.SelectedItem().(MenuItem).module.View())
+		/* var header, footer string
+		switch m.state {
+		case stateShowPrivateKey, stateShowPublicKey, stateShowMnemonic:
+			header = style.TitleStyle.Render(m.wallet.PublicKeyString())
+		} */
+		return style.ModuleWrapper.Render(m.list.SelectedItem().(MenuItem).module.View())
 	}
 }

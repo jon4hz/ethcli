@@ -21,7 +21,7 @@ type Wallet struct {
 	publicKey          *ecdsa.PublicKey
 }
 
-const defaultEntropySize = 256
+const defaultEntropySize = 128
 
 func New() Wallet {
 	entropy, _ := bip39.NewEntropy(defaultEntropySize)
@@ -56,4 +56,8 @@ func (w *Wallet) PrivateKeyString() string {
 
 func (w *Wallet) PublicKeyString() string {
 	return crypto.PubkeyToAddress(*w.publicKey).Hex()
+}
+
+func (w *Wallet) Mnemonic() string {
+	return w.mnemonic
 }
