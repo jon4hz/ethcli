@@ -3,6 +3,7 @@ package cmd
 import (
 	"github.com/jon4hz/ethcli/internal/config"
 	"github.com/jon4hz/ethcli/internal/tui"
+	"github.com/jon4hz/ethcli/internal/version"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -10,6 +11,7 @@ import (
 var rootCmd = &cobra.Command{
 	Use:              "ethcli",
 	Short:            "ethcli is a cli tool to work with ethereum",
+	Version:          version.Version,
 	TraverseChildren: true,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return startTui()
@@ -18,6 +20,9 @@ var rootCmd = &cobra.Command{
 
 func init() {
 	cobra.OnInitialize(config.Init)
+
+	rootCmd.AddCommand(versionCmd)
+
 	rootCmd.Flags().StringP("rpc", "r", "http://localhost:8545", "rpc endpoint")
 	rootCmd.Flags().StringP("config", "c", "", "config file")
 

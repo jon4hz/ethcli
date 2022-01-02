@@ -19,7 +19,7 @@ var userConfig = func() string {
 }
 
 type Config struct {
-	URL string `yaml:"url"`
+	RPC string `yaml:"rpc"`
 }
 
 var cfg Config

@@ -3,12 +3,15 @@ before:
     # You may remove this if you don't use go modules.
     - go mod tidy
 builds:
-  - env:
+  - 
+    main: ./cmd/ethcli/main.go
+
+    env:
       - CGO_ENABLED=0
     goos:
       - linux
     ldflags:
-      - -s -w -X github.com/jon4hz/bermuda/internal/version.Version={{.Version}} -X github.com/jon4hz/bermuda/internal/version.Commit={{.Commit}} -X github.com/jon4hz/bermuda/internal/version.Date={{.Date}} -X github.com/jon4hz/bermuda/internal/version.BuiltBy=goreleaser
+      - -s -w -X github.com/jon4hz/ethcli/internal/version.Version={{.Version}} -X github.com/jon4hz/ethcli/internal/version.Commit={{.Commit}} -X github.com/jon4hz/ethcli/internal/version.Date={{.Date}} -X github.com/jon4hz/ethcli/internal/version.BuiltBy=goreleaser
 
 archives:
   - replacements:

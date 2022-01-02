@@ -2,10 +2,12 @@ package tui
 
 import (
 	"github.com/charmbracelet/bubbles/list"
+	"github.com/jon4hz/ethcli/internal/config"
 	"github.com/jon4hz/ethcli/internal/tui/module/mnemonic"
 	"github.com/jon4hz/ethcli/internal/tui/module/newwallet"
 	"github.com/jon4hz/ethcli/internal/tui/module/qr"
 	"github.com/jon4hz/ethcli/internal/tui/module/quit"
+	"github.com/jon4hz/ethcli/internal/tui/module/rpc"
 )
 
 func getInitialItems() []list.Item {
@@ -34,7 +36,9 @@ func (m model) getMainItems() []list.Item {
 		newMenuItem("New Transaction", "Create a new transaction", withState(stateNewTx)),
 		newMenuItem("New Token Transfer", "Create a new token transfer", withState(stateNewTokenTx)),
 		newMenuItem("Sign Message", "Sign a message", withState(stateNewMessage)),
-		newMenuItem("Set RPC", "Set the RPC URL", withState(stateSetRPC)),
+		newMenuItem("Set RPC", "Set the RPC URL", withState(stateSetRPC),
+			withModel(rpc.NewModel(config.Get())),
+		),
 		newMenuItem("Save Keystore", "Save the wallet to a keystore file", withState(stateKSStore)),
 		newMenuItem("Quit", "Quit the application", withState(stateQuit), withModel(quit.NewModel())),
 	}

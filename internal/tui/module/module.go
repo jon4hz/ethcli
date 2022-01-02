@@ -15,3 +15,7 @@ type DefaultModule struct{}
 func (m DefaultModule) Init() tea.Cmd           { return nil }
 func (m *DefaultModule) Update(tea.Msg) tea.Cmd { return func() tea.Msg { return BackMsg{} } }
 func (m DefaultModule) View() string            { return "" }
+
+func Back() tea.Msg {
+	return BackMsg{}
+}
