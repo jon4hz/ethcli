@@ -23,7 +23,7 @@ type Wallet struct {
 
 const defaultEntropySize = 128
 
-func New() Wallet {
+func NewWallet() Wallet {
 	entropy, _ := bip39.NewEntropy(defaultEntropySize)
 	mnemonic, _ := bip39.NewMnemonic(entropy)
 	wallet, _ := hdwallet.NewFromMnemonic(mnemonic)
@@ -54,7 +54,7 @@ func (w *Wallet) PrivateKeyString() string {
 	return hexutil.Encode(privateKeyBytes)[2:]
 }
 
-func (w *Wallet) PublicKeyString() string {
+func (w *Wallet) Address() string {
 	return crypto.PubkeyToAddress(*w.publicKey).Hex()
 }
 

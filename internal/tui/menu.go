@@ -1,25 +1,18 @@
 package tui
 
 import (
-	tea "github.com/charmbracelet/bubbletea"
-	module "github.com/jon4hz/ethcli/internal/tui/modules"
+	"github.com/jon4hz/ethcli/internal/tui/module"
 )
 
 type (
 	menuListOption func(*MenuItem)
 
 	MenuItem struct {
-		title     string
-		desc      string
-		nextState state
-		callback  func(tea.Msg) tea.Cmd
-		module    module.Module
+		title  string
+		desc   string
+		state  state
+		module module.Module
 	}
-)
-
-var (
-	defaultCallback = func(tea.Msg) tea.Cmd { return nil }
-	quitCallback    = func(tea.Msg) tea.Cmd { return tea.Quit }
 )
 
 func (i MenuItem) Title() string       { return i.title }
@@ -32,10 +25,9 @@ func (i *MenuItem) SetModel(module module.Module) {
 
 func newMenuItem(title, desc string, opts ...menuListOption) MenuItem {
 	m := MenuItem{
-		title:    title,
-		desc:     desc,
-		callback: defaultCallback,
-		module:   &module.DefaultModule{},
+		title:  title,
+		desc:   desc,
+		module: &module.DefaultModule{},
 	}
 	for _, opt := range opts {
 		opt(&m)
@@ -43,15 +35,9 @@ func newMenuItem(title, desc string, opts ...menuListOption) MenuItem {
 	return m
 }
 
-func withNextState(state state) menuListOption {
+func withState(state state) menuListOption {
 	return func(m *MenuItem) {
-		m.nextState = state
-	}
-}
-
-func withCallback(callback func(tea.Msg) tea.Cmd) menuListOption {
-	return func(m *MenuItem) {
-		m.callback = callback
+		m.state = state
 	}
 }
 

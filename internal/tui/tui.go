@@ -3,12 +3,12 @@ package tui
 import (
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/jon4hz/ethcli/internal/config"
 	"github.com/jon4hz/ethcli/internal/ethcli"
-	module "github.com/jon4hz/ethcli/internal/tui/modules"
+	"github.com/jon4hz/ethcli/internal/tui/module"
+	"github.com/jon4hz/ethcli/internal/tui/module/newwallet"
 	"github.com/jon4hz/ethcli/internal/tui/style"
 )
-
-type newWalletMsg ethcli.Wallet
 
 type state int
 
@@ -33,6 +33,7 @@ const (
 type model struct {
 	state        state
 	wallet       *ethcli.Wallet
+	config       *config.Config
 	currentModel tea.Model
 	list         list.Model
 	header       string
@@ -53,6 +54,8 @@ func Start() error {
 	m.list.Title = "ethcli"
 	m.list.Styles.Title = style.TitleStyle
 
+	m.config = config.Get()
+
 	return tea.NewProgram(m, tea.WithAltScreen()).Start()
 }
 
@@ -69,8 +72,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "enter":
 			switch m.state {
 			case stateInit, stateReady:
-				m.state = m.list.SelectedItem().(MenuItem).nextState
-				cmd := m.list.SelectedItem().(MenuItem).callback(msg)
+				m.state = m.list.SelectedItem().(MenuItem).state
+				cmd := m.list.SelectedItem().(MenuItem).module.Init()
 				return m, cmd
 			}
 		}
@@ -79,14 +82,13 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		top, right, bottom, left := style.DocStyle.GetMargin()
 		m.list.SetSize(msg.Width-left-right, msg.Height-top-bottom)
 
-	case newWalletMsg:
+	case newwallet.Msg:
 		*m.wallet = ethcli.Wallet(msg)
-		m.list.SetItems(getMainItems(m.wallet))
-		m.list.Title = m.wallet.PublicKeyString()
+		m.list.SetItems(m.getMainItems())
+		m.list.Title = m.wallet.Address()
 
 	case module.BackMsg:
 		m.state = stateReady
-
 	}
 
 	var cmd tea.Cmd
@@ -104,11 +106,10 @@ func (m model) View() string {
 	case stateInit, stateReady:
 		return style.DocStyle.Render(m.list.View())
 	default:
-		/* var header, footer string
-		switch m.state {
-		case stateShowPrivateKey, stateShowPublicKey, stateShowMnemonic:
-			header = style.TitleStyle.Render(m.wallet.PublicKeyString())
-		} */
-		return style.ModuleWrapper.Render(m.list.SelectedItem().(MenuItem).module.View())
+		return style.ModuleWrapper.Render(m.selectedView())
 	}
+}
+
+func (m model) selectedView() string {
+	return m.list.SelectedItem().(MenuItem).module.View()
 }
